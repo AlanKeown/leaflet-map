@@ -1,0 +1,189 @@
+<script lang="ts">
+	import { onMount, onDestroy, setContext } from 'svelte';
+	import { writable, type Writable } from 'svelte/store';
+	import type L from 'leaflet';
+	import 'leaflet/dist/leaflet.css';
+	// import './custom.css';
+
+	// Props
+	export let centre: L.LatLngExpression;
+	export let zoom: number = 15;
+	export let minZoom: number | undefined = undefined;
+	export let maxZoom: number | undefined = undefined;
+	export let zoomControl: boolean = true;
+	export let attributionControl: boolean = true;
+	export let boxZoom: boolean = true;
+	export let doubleClickZoom: boolean = true;
+	export let touchZoom: boolean = true;
+	export let dragging: boolean = true;
+	export let zoomSnap: number = 1;
+	export let zoomDelta: number = 1;
+	export let scrollWheelZoom: boolean = true;
+	export let keyboard: boolean = true;
+	export let layersControl: boolean = true;
+	export let width = '100%';
+	export let height = '98%';
+
+	// Reactive style
+	$: style = `width:${width};height:${height};`;
+
+	// Leaflet module and map instance
+	let leaflet: typeof L;
+	let leafletMap: L.Map;
+	let mapDiv: HTMLDivElement;
+
+	// Stores for Leaflet and map instance
+	const leafletStore: Writable<typeof L | null> = writable(null);
+	const mapStore: Writable<L.Map | null> = writable(null);
+	const layersStore: Writable<Record<string, L.Layer>> = writable({});
+
+	// Set context for child components
+	setContext('leaflet', {
+		getLeaflet: () => leaflet,
+		leafletStore
+	});
+
+	setContext('leafletMap', {
+		getLeafletMap: () => leafletMap,
+		mapStore
+	});
+
+	setContext('layersStore', layersStore);
+
+	let layersControlInstance: L.Control.Layers;
+
+	onMount(async () => {
+		leaflet = await import('leaflet');
+		leafletStore.set(leaflet);
+
+		leafletMap = leaflet
+			.map(mapDiv, {
+				minZoom,
+				maxZoom,
+				zoomSnap,
+				zoomDelta,
+				boxZoom,
+				doubleClickZoom,
+				touchZoom,
+				scrollWheelZoom,
+				dragging,
+				keyboard,
+				zoomControl,
+				attributionControl
+			})
+			.setView(centre, zoom);
+
+		if (layersControl) {
+			layersControlInstance = leaflet.control.layers().addTo(leafletMap);
+
+			layersStore.subscribe((layers) => {
+				if (layersControlInstance) {
+					layersControlInstance.remove();
+					layersControlInstance = leaflet.control.layers().addTo(leafletMap);
+
+					Object.entries(layers).forEach(([name, layer]) => {
+						layersControlInstance.addOverlay(layer, name);
+					});
+				}
+			});
+		}
+
+		mapStore.set(leafletMap);
+
+		// Event listeners
+		leafletMap.on('zoomend', () => {
+			zoom = leafletMap.getZoom();
+		});
+
+		leafletMap.on('moveend', () => {
+			centre = leafletMap.getCenter();
+		});
+	});
+
+	onDestroy(() => {
+		if (leafletMap) {
+			leafletMap.remove();
+			mapStore.set(null);
+		}
+		if (layersControlInstance) {
+			layersControlInstance.remove();
+			layersStore.set({});
+		}
+		leafletStore.set(null);
+	});
+
+	// Methods
+	export function getCenter() {
+		return leafletMap?.getCenter();
+	}
+
+	export function getZoom() {
+		return leafletMap?.getZoom();
+	}
+
+	export function setView(center: L.LatLngExpression, zoom: number, options?: L.ZoomPanOptions) {
+		leafletMap?.setView(center, zoom, options);
+	}
+
+	export function setZoom(zoom: number, options?: L.ZoomPanOptions) {
+		leafletMap?.setZoom(zoom, options);
+	}
+
+	export function zoomIn(delta?: number, options?: L.ZoomOptions) {
+		leafletMap?.zoomIn(delta, options);
+	}
+
+	export function zoomOut(delta?: number, options?: L.ZoomOptions) {
+		leafletMap?.zoomOut(delta, options);
+	}
+
+	export function setZoomAround(latlng: L.LatLngExpression, zoom: number, options?: L.ZoomOptions) {
+		leafletMap?.setZoomAround(latlng, zoom, options);
+	}
+
+	export function fitBounds(bounds: L.LatLngBoundsExpression, options?: L.FitBoundsOptions) {
+		leafletMap?.fitBounds(bounds, options);
+	}
+
+	export function fitWorld(options?: L.FitBoundsOptions) {
+		leafletMap?.fitWorld(options);
+	}
+
+	export function panTo(latlng: L.LatLngExpression, options?: L.PanOptions) {
+		leafletMap?.panTo(latlng, options);
+	}
+
+	export function panBy(offset: L.PointExpression, options?: L.PanOptions) {
+		leafletMap?.panBy(offset, options);
+	}
+
+	export function setMaxBounds(bounds: L.LatLngBoundsExpression) {
+		leafletMap?.setMaxBounds(bounds);
+	}
+
+	export function setMinZoom(zoom: number) {
+		leafletMap?.setMinZoom(zoom);
+	}
+
+	export function setMaxZoom(zoom: number) {
+		leafletMap?.setMaxZoom(zoom);
+	}
+
+	export function panInsideBounds(bounds: L.LatLngBoundsExpression, options?: L.PanOptions) {
+		leafletMap?.panInsideBounds(bounds, options);
+	}
+
+	export function invalidateSize(options?: boolean | L.PanInsideOptions) {
+		leafletMap?.invalidateSize(options);
+	}
+
+	export function stop() {
+		leafletMap?.stop();
+	}
+</script>
+
+<div bind:this={mapDiv} {style}>
+	{#if leaflet && leafletMap}
+		<slot />
+	{/if}
+</div>
