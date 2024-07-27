@@ -22,3 +22,7 @@ vite.config.ts.timestamp-*
 
 # Supabase
 .supabase
+
+# Private files
+notes.txt
+

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy, setContext } from 'svelte';
 	import { writable, type Writable } from 'svelte/store';
+
+	import LeafletLegendControl from './controls/LeafletLegendControl.svelte';
+
 	import type L from 'leaflet';
 	import 'leaflet/dist/leaflet.css';
 	// import './custom.css';
@@ -10,8 +13,6 @@
 	export let zoom: number = 15;
 	export let minZoom: number | undefined = undefined;
 	export let maxZoom: number | undefined = undefined;
-	export let zoomControl: boolean = true;
-	export let attributionControl: boolean = true;
 	export let boxZoom: boolean = true;
 	export let doubleClickZoom: boolean = true;
 	export let touchZoom: boolean = true;
@@ -20,7 +21,11 @@
 	export let zoomDelta: number = 1;
 	export let scrollWheelZoom: boolean = true;
 	export let keyboard: boolean = true;
+	export let zoomControl: boolean = true;
+	export let attributionControl: boolean = true;
 	export let layersControl: boolean = true;
+	export let legend: boolean = false;
+	export let legendPosition: L.ControlPosition = 'bottomright';
 	export let width = '100%';
 	export let height = '98%';
 
@@ -185,5 +190,8 @@
 <div bind:this={mapDiv} {style}>
 	{#if leaflet && leafletMap}
 		<slot />
+		{#if legend}
+			<LeafletLegendControl position={legendPosition} />
+		{/if}
 	{/if}
 </div>
